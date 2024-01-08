@@ -1,17 +1,15 @@
-const contactFunction = require('../models/contacts');
-
-// const booksFunctions = require("../models/books");
 const { httpError } = require('../helpers');
 const { ctrlWrapper } = require('../decorators');
+const Contact = require('../models/contact');
 
 const listContacts = async (req, res, next) => {
-	const contacts = await contactFunction.listContacts();
+	const contacts = await Contact.find();
 	res.json(contacts);
 };
 
 const getContactById = async (req, res, next) => {
 	const { contactId } = req.params;
-	const contact = await contactFunction.getContactById(contactId);
+	const contact = await Contact.findById(contactId);
 
 	if (!contact) {
 		throw httpError(404, `Book with id ${contactId} not found`);
@@ -21,14 +19,14 @@ const getContactById = async (req, res, next) => {
 
 const addContact = async (req, res, next) => {
 	const { name, email, phone } = req.body;
-	const newContact = await contactFunction.addContact({ name, email, phone });
+	const newContact = await Contact.create({ name, email, phone });
 	res.status(201).json(newContact);
 };
 
 const updateContact = async (req, res, next) => {
 	const { contactId } = req.params;
 	const { name, email, phone } = req.body;
-	const updateContact = await contactFunction.updateContact(contactId, { name, email, phone });
+	const updateContact = await Contact.findByIdAndUpdate(contactId, { name, email, phone }, { new: true });
 	if (!updateContact) {
 		throw httpError(404, `Book with id ${contactId} not found`);
 	}
@@ -37,12 +35,27 @@ const updateContact = async (req, res, next) => {
 
 const removeContact = async (req, res, next) => {
 	const { contactId } = req.params;
-	const deleteContact = await contactFunction.removeContact(contactId);
+	const deleteContact = await Contact.findByIdAndDelete(contactId);
 
 	if (!deleteContact) {
 		throw httpError(404, `Book with id ${contactId} not found`);
 	}
 	res.json({ message: 'Contact deleted' });
+};
+
+const updateStatusContact = async (req, res, next) => {
+	const { contactId } = req.params;
+	const { favorite } = req.body;
+	const updateContact = await Contact.findByIdAndUpdate(contactId, { favorite }, { new: true });
+
+	if (favorite === undefined) {
+		throw httpError(400, 'missing field favorite');
+	}
+
+	if (!updateContact) {
+		throw httpError(404, `Not found `);
+	}
+	res.status(201).json(updateContact);
 };
 
 module.exports = {
@@ -51,4 +64,5 @@ module.exports = {
 	addContact: ctrlWrapper(addContact),
 	updateContact: ctrlWrapper(updateContact),
 	removeContact: ctrlWrapper(removeContact),
+	updateStatusContact: ctrlWrapper(updateStatusContact),
 };
