@@ -1,4 +1,4 @@
 module.exports = {
-	httpError: require('./httpError'),
+	HttpError: require('./HttpError'),
 	handleMongooseError: require('./handleMongooseError'),
 };

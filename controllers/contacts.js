@@ -1,10 +1,22 @@
-const { httpError } = require('../helpers');
+const { HttpError } = require('../helpers');
 const { ctrlWrapper } = require('../decorators');
 const Contact = require('../models/contact');
 
 const listContacts = async (req, res, next) => {
-	const contacts = await Contact.find();
-	res.json(contacts);
+	const { _id: owner } = req.user;
+	const { limit = 10, page = 1 } = req.query;
+	const skip = (page - 1) * limit;
+	const data = await Contact.find({ owner }).skip(skip).limit(limit).populate('owner', 'email name');
+	const count = await Contact.countDocuments({ owner });
+	console.log(count);
+	const totalPages = Math.round(count / +limit);
+	const pagination = {
+		perPage: +limit,
+		count: data.length,
+		page: +page,
+		totalPages,
+	};
+	res.json({ data, pagination });
 };
 
 const getContactById = async (req, res, next) => {
@@ -12,14 +24,15 @@ const getContactById = async (req, res, next) => {
 	const contact = await Contact.findById(contactId);
 
 	if (!contact) {
-		throw httpError(404, `Contact with id ${contactId} not found`);
+		throw HttpError(404, `Contact with id ${contactId} not found`);
 	}
 	res.json(contact);
 };
 
 const addContact = async (req, res, next) => {
+	const { _id } = req.user;
 	const body = req.body;
-	const newContact = await Contact.create(body);
+	const newContact = await Contact.create({ ...body, owner: _id });
 	res.status(201).json(newContact);
 };
 
@@ -28,7 +41,7 @@ const updateContact = async (req, res, next) => {
 	const { name, email, phone } = req.body;
 	const updateContact = await Contact.findByIdAndUpdate(contactId, { name, email, phone }, { new: true });
 	if (!updateContact) {
-		throw httpError(404, `Contact with id ${contactId} not found`);
+		throw HttpError(404, `Contact with id ${contactId} not found`);
 	}
 	res.status(201).json(updateContact);
 };
@@ -38,7 +51,7 @@ const removeContact = async (req, res, next) => {
 	const deleteContact = await Contact.findByIdAndDelete(contactId);
 
 	if (!deleteContact) {
-		throw httpError(404, `Contact with id ${contactId} not found`);
+		throw HttpError(404, `Contact with id ${contactId} not found`);
 	}
 	res.json({ message: 'Contact deleted' });
 };
@@ -49,11 +62,11 @@ const updateStatusContact = async (req, res, next) => {
 	const updateContact = await Contact.findByIdAndUpdate(contactId, { favorite }, { new: true });
 
 	if (favorite === undefined) {
-		throw httpError(400, 'missing field favorite');
+		throw HttpError(400, 'missing field favorite');
 	}
 
 	if (!updateContact) {
-		throw httpError(404, `Not found `);
+		throw HttpError(404, `Not found `);
 	}
 	res.status(201).json(updateContact);
 };
