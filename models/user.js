@@ -1,5 +1,5 @@
-const { Schema, model } = require('mongoose');
-const { handleMongooseError } = require('../helpers');
+const { Schema, model } = require('mongoose')
+const { handleMongooseError } = require('../helpers')
 
 const userSchema = new Schema(
 	{
@@ -23,16 +23,20 @@ const userSchema = new Schema(
 			enum: ['starter', 'pro', 'business'],
 			default: 'starter',
 		},
+		avatarUrl: {
+			type: String,
+			required: true,
+		},
 		token: {
 			type: String,
 			default: '',
 		},
 	},
 	{ versionKey: false, timestamps: true }
-);
+)
 
-userSchema.post('save', handleMongooseError);
+userSchema.post('save', handleMongooseError)
 
-const User = model('user', userSchema);
+const User = model('user', userSchema)
 
-module.exports = User;
+module.exports = User
