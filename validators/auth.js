@@ -1,4 +1,4 @@
-const Joi = require('joi');
+const Joi = require('joi')
 
 const registerUser = Joi.object({
 	name: Joi.string().required(),
@@ -6,16 +6,21 @@ const registerUser = Joi.object({
 		.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
 		.required(),
 	password: Joi.string().required(),
-});
+})
 
 const loginUser = Joi.object({
 	email: Joi.string()
 		.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
 		.required(),
 	password: Joi.string().required(),
-});
+})
+
+const emailSchema = Joi.object({
+	email: Joi.string().required(),
+})
 
 module.exports = {
 	registerUser,
 	loginUser,
-};
+	emailSchema,
+}

@@ -7,6 +7,9 @@ const envsConfig = require('../configs/envsConfig')
 const gravatar = require('gravatar')
 const path = require('path')
 const jimp = require('jimp')
+// const uuid = require('uuid')
+const sendEmail = require('../services/emailServices')
+// const envsConfigs = require('../configs/envsConfig')
 
 const register = async (req, res) => {
 	const { email, password } = req.body
@@ -16,7 +19,23 @@ const register = async (req, res) => {
 	}
 	const avatarUrl = gravatar.url(email)
 	const hashedPassword = await bcrypt.hash(password, 10)
-	const { email: userEmail, name } = await User.create({ ...req.body, password: hashedPassword, avatarUrl })
+	const verificationToken = 'qweasdqweasd'
+	console.log(verificationToken, 1)
+
+	const emailSettings = {
+		to: email,
+		subject: 'Verification',
+		html: `<a href="${envsConfig.baseURL}/api/auth/verify/${verificationToken}" target="_blank">Click to verify</a>`,
+	}
+
+	await sendEmail(emailSettings)
+
+	const { email: userEmail, name } = await User.create({
+		...req.body,
+		password: hashedPassword,
+		avatarUrl,
+		verificationToken,
+	})
 	res.status(201).json({ userEmail, name })
 }
 
@@ -26,6 +45,9 @@ const login = async (req, res) => {
 
 	if (!isExist) {
 		throw HttpError(401, `Email or password wrong`)
+	}
+	if (!isExist.isVerified) {
+		throw HttpError(401, 'Email not verify')
 	}
 	const isPasswordSame = await bcrypt.compare(password, isExist.password)
 
@@ -79,10 +101,50 @@ const updateAvatar = async (req, res) => {
 	})
 }
 
+const verify = async (req, res) => {
+	const { verificationToken } = req.params
+	const user = await User.findOne({ verificationToken })
+
+	if (!user) {
+		throw HttpError(401, 'Unauthorized')
+	}
+
+	await User.findByIdAndUpdate(user._id, {
+		verificationToken: '',
+		isVerified: true,
+	})
+	res.json({ message: 'Verification successful' })
+}
+
+const resend = async (req, res) => {
+	const { email } = req.body
+	const user = await User.findOne({ email })
+
+	if (!user) {
+		throw HttpError(401, 'User is not found')
+	}
+
+	if (user.isVerified) {
+		throw HttpError(400, 'User has already verified')
+	}
+
+	const emailSettings = {
+		to: email,
+		subject: 'Verification',
+		html: `<a href="${envsConfig.baseURL}/api/auth/verify/${user.verificationToken}" target="_blank">Click to verify</a>`,
+	}
+
+	await sendEmail(emailSettings)
+
+	res.json({ message: 'Message sent' })
+}
+
 module.exports = {
 	register: ctrlWrapper(register),
 	login: ctrlWrapper(login),
 	current: ctrlWrapper(current),
 	logout: ctrlWrapper(logout),
 	updateAvatar: ctrlWrapper(updateAvatar),
+	verify: ctrlWrapper(verify),
+	resend: ctrlWrapper(resend),
 }
